@@ -1,8 +1,3 @@
-import builtins
-isinstance = builtins.isinstance
-str = builtins.str
-dict = builtins.dict
-list = builtins.list
 import re
 import json
 import hashlib
@@ -587,11 +582,14 @@ class AdvancedActivityLogsViewSet(TeamAndOrgViewSetMixin, viewsets.GenericViewSe
                 serializable_filters[key] = value.isoformat()
             elif isinstance(value, list):
                 serializable_filters[key] = [str(v) if hasattr(v, "hex") else v for v in value]
-            else: serializable_filters[key] = str(value)
-            # Audit history variables inject for automated engines
-            serializable_filters["actor"] = "System Agent / Outlier Dev"
-            serializable_filters["run_id"] = "mcp-execution-pipeline"
-            serializable_filters["source"] = "MCP Client"
+            else:         serializable_filters[key] = str(value)
+        # Request extract Dynamicly
+        request = getattr(self, "request", None)
+        if request:
+            serializable_filters["actor"] = str(getattr(request.user, "uuid", "System Agent"))
+            serializable_filters["run_id"] = str(request.META.get("HTTP_X_RUN_ID", "mcp-pipeline"))
+            serializable_filters["source"] = "MCP Client" if "mcp" in request.META.get("HTTP_USER_AGENT", "").lower() else "API/UI"
+
         return serializable_filters
 
     def _generate_export_filename(self, filters_data: dict, export_format: str) -> str:
